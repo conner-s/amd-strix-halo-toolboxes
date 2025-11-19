@@ -54,5 +54,15 @@ RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
 COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
 RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
 
+# Conditionally install llama-swap if INCLUDE_LLAMA_SWAP=1
+COPY --from=llama-swap-import /tmp/llama-swap /usr/local/bin/llama-swap
+RUN if [ "${INCLUDE_LLAMA_SWAP}" = "1" ]; then \
+      chmod +x /usr/local/bin/llama-swap && \
+      echo "llama-swap installed successfully"; \
+    else \
+      rm -f /usr/local/bin/llama-swap && \
+      echo "llama-swap not included in this build"; \
+    fi
+
 # shell
 CMD ["/bin/bash"]

@@ -38,7 +38,64 @@ podman build --no-cache -t llama-rocm-6.4.2 -f Dockerfile.rocm-6.4.2 .
 
 ---
 
-## 3. Customizing the Build
+## 3. Building with llama-swap Support
+
+All toolbox images support optional inclusion of [llama-swap](https://github.com/mostlygeek/llama-swap), a utility for managing swap space for large language models.
+
+**Example: Build with llama-swap included (Podman)**
+
+```sh
+cd toolboxes
+podman build \
+  --build-context llama-swap=Dockerfile.llama-swap \
+  --build-arg INCLUDE_LLAMA_SWAP=1 \
+  -f Dockerfile.rocm-7.1-rocwmma \
+  -t rocm-llama:latest .
+```
+
+**Example: Build with llama-swap included (Docker)**
+
+```sh
+cd toolboxes
+docker build \
+  --build-context llama-swap=Dockerfile.llama-swap \
+  --build-arg INCLUDE_LLAMA_SWAP=1 \
+  -f Dockerfile.rocm-7.1-rocwmma \
+  -t rocm-llama:latest .
+```
+
+**What's happening:**
+
+* `--build-context llama-swap=Dockerfile.llama-swap` provides the llama-swap builder as an external build context
+* `--build-arg INCLUDE_LLAMA_SWAP=1` enables llama-swap installation in the final image
+* The llama-swap binary is downloaded from the [official GitHub releases](https://github.com/mostlygeek/llama-swap/releases) and placed in `/usr/local/bin/llama-swap`
+
+**To build WITHOUT llama-swap** (default behavior), simply omit the `--build-context` and `--build-arg` flags:
+
+```sh
+cd toolboxes
+podman build --no-cache -t llama-vulkan-radv -f Dockerfile.vulkan-radv .
+```
+
+**Specifying a llama-swap version:**
+
+You can specify a specific version of llama-swap using the `LLAMA_SWAP_VERSION` build argument:
+
+```sh
+cd toolboxes
+podman build \
+  --build-context llama-swap=Dockerfile.llama-swap \
+  --build-arg INCLUDE_LLAMA_SWAP=1 \
+  --build-arg LLAMA_SWAP_VERSION=v0.5.0 \
+  -f Dockerfile.rocm-7.1-rocwmma \
+  -t rocm-llama:latest .
+```
+
+If `LLAMA_SWAP_VERSION` is not specified, it defaults to `latest`.
+
+---
+
+## 4. Customizing the Build
 
 * **llama.cpp version**: Change the `git clone` or `git checkout` line in the Dockerfile.
 * **Extra dependencies**: Add them to the Dockerfile as needed.
@@ -46,7 +103,7 @@ podman build --no-cache -t llama-rocm-6.4.2 -f Dockerfile.rocm-6.4.2 .
 
 ---
 
-## 4. Using the Custom Image with Toolbx
+## 5. Using the Custom Image with Toolbx
 
 Create a new toolbox using your freshly built image:
 
@@ -59,14 +116,15 @@ Replace the backend/image name and device/group options as needed (see main READ
 
 ---
 
-## 5. Troubleshooting
+## 6. Troubleshooting
 
 * **Build fails (ROCm images especially):** Try building with more memory or swap.
 * **Toolbox can't access GPU:** Make sure you pass the correct device/group options.
+* **llama-swap not found in container:** Ensure you used `--build-context` and `--build-arg INCLUDE_LLAMA_SWAP=1` when building.
 
 ---
 
-## 6. References
+## 7. References
 
 * [Fedora Toolbox Documentation](https://docs.fedoraproject.org/en-US/fedora-silverblue/toolbox/)
 * [Podman Build Reference](https://docs.podman.io/en/latest/markdown/podman-build.1.html)
