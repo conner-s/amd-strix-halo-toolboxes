@@ -1,5 +1,7 @@
 # build stage
 FROM registry.fedoraproject.org/fedora:rawhide AS builder
+# Optional: Include llama-swap (set to 1 to enable)
+ARG INCLUDE_LLAMA_SWAP=0
 
 # rocm 6.4.3 repo
 RUN <<'EOF'
@@ -73,6 +75,7 @@ FROM llama-swap:llama-swap-builder AS llama-swap-import
 
 # runtime stage
 FROM registry.fedoraproject.org/fedora-minimal:rawhide
+ARG INCLUDE_LLAMA_SWAP=0
 
 # rocm 6.4.3 repo
 RUN <<'EOF'

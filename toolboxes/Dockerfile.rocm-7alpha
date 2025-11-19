@@ -82,8 +82,12 @@ RUN find /opt/rocm-7.0 -type f -name '*.a' -delete \
  && rm -rf /opt/rocm-7.0/include /opt/rocm-7.0/share \
           /opt/rocm-7.0/llvm/include /opt/rocm-7.0/llvm/share
 
+# Import llama-swap from external Dockerfile (if INCLUDE_LLAMA_SWAP=1)
+FROM llama-swap:llama-swap-builder AS llama-swap-import
+
 # runtime
 FROM registry.fedoraproject.org/fedora-minimal:43
+ARG INCLUDE_LLAMA_SWAP=0
 
 RUN microdnf -y --nodocs --setopt=install_weak_deps=0 install \
       bash ca-certificates libatomic libstdc++ libgcc radeontop vim \
@@ -131,5 +135,15 @@ RUN printf '%s\n' \
 RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
  && echo "/usr/local/lib64" >> /etc/ld.so.conf.d/local.conf \
  && ldconfig
+
+# Conditionally install llama-swap if INCLUDE_LLAMA_SWAP=1
+COPY --from=llama-swap-import /tmp/llama-swap /usr/local/bin/llama-swap
+RUN if [ "${INCLUDE_LLAMA_SWAP}" = "1" ]; then \
+      chmod +x /usr/local/bin/llama-swap && \
+      echo "llama-swap installed successfully"; \
+    else \
+      rm -f /usr/local/bin/llama-swap && \
+      echo "llama-swap not included in this build"; \
+    fi
 
 CMD ["/bin/bash"]
