@@ -110,10 +110,10 @@ RUN printf '%s\n' \
 
 
 # llama-swap stage (optional, use --target runtime to skip)
-FROM llama-swap:llama-swap-builder AS llama-swap-import
+FROM llama-swap AS llama-swap-import
 
 FROM runtime AS runtime-with-llamaswap
-COPY --from=llama-swap-import /tmp/llama-swap /usr/local/bin/llama-swap
+COPY --from=llama-swap-import /llama-swap /usr/local/bin/llama-swap
 RUN chmod +x /usr/local/bin/llama-swap
 
 # profile
