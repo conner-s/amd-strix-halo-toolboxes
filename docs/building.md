@@ -116,15 +116,33 @@ Replace the backend/image name and device/group options as needed (see main READ
 
 ---
 
-## 6. Troubleshooting
+## 6. CI/CD Integration
+
+The GitHub Actions workflow (`build_and_publish.yml`) supports building images with llama-swap included:
+
+1. Navigate to **Actions** → **Build & Publish AMD Strix Halo Toolboxes** in the GitHub repository
+2. Click **Run workflow**
+3. Set **include_llama_swap** to **true** to build all images with llama-swap
+4. Images built with llama-swap will have `-llamaswap` appended to their tag (e.g., `rocm-7.1-rocwmma-llamaswap`)
+
+**Default behavior:** Images are built WITHOUT llama-swap unless explicitly enabled.
+
+**Note:** Building with llama-swap creates separate image tags, so both versions can coexist on Docker Hub:
+- Standard: `docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-7.1-rocwmma`
+- With llama-swap: `docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-7.1-rocwmma-llamaswap`
+
+---
+
+## 7. Troubleshooting
 
 * **Build fails (ROCm images especially):** Try building with more memory or swap.
 * **Toolbox can't access GPU:** Make sure you pass the correct device/group options.
 * **llama-swap not found in container:** Ensure you used `--build-context` and `--build-arg INCLUDE_LLAMA_SWAP=1` when building.
+* **"llama-swap" build context not found:** The `--build-context` flag requires Docker BuildKit. Ensure you're using a recent version of Docker/Podman.
 
 ---
 
-## 7. References
+## 8. References
 
 * [Fedora Toolbox Documentation](https://docs.fedoraproject.org/en-US/fedora-silverblue/toolbox/)
 * [Podman Build Reference](https://docs.podman.io/en/latest/markdown/podman-build.1.html)

@@ -9,6 +9,14 @@ on:
           Use "all" to build everything.
         required: false
         default: all
+      include_llama_swap:
+        description: 'Include llama-swap in the build (true/false)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 env:
   DOCKERHUB_REPO: docker.io/kyuz0/amd-strix-halo-toolboxes
@@ -84,8 +92,20 @@ jobs:
           IMM="${DOCKERHUB_REPO}:${TAG}"
           CHN="${DOCKERHUB_REPO}:${B}"
 
+          # Prepare build args and context for llama-swap
+          BUILD_ARGS=""
+          BUILD_CONTEXT=""
+          if [[ "${{ inputs.include_llama_swap }}" == "true" ]]; then
+            echo "→ Building with llama-swap support enabled"
+            BUILD_CONTEXT="--build-context llama-swap=Dockerfile.llama-swap"
+            BUILD_ARGS="--build-arg INCLUDE_LLAMA_SWAP=1"
+            # Append -llamaswap to tag if building with llama-swap
+            TAG="${B}-llamaswap_${BUILD_TS}"
+            CHN="${CHN}-llamaswap"
+          fi
+
           echo "→ Building ${DF}"
-          docker build --no-cache -t "${LI}" -f "${DF}" .
+          docker build --no-cache ${BUILD_CONTEXT} ${BUILD_ARGS} -t "${LI}" -f "${DF}" .
 
           echo "→ Tag & push immutable → ${IMM}"
           docker tag "${LI}" "${IMM}"
