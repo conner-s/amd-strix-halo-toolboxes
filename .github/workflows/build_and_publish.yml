@@ -98,10 +98,12 @@ jobs:
           if [[ "${{ inputs.include_llama_swap }}" == "true" ]]; then
             echo "→ Building with llama-swap support enabled"
             BUILD_CONTEXT="--build-context llama-swap=Dockerfile.llama-swap"
-            BUILD_ARGS="--build-arg INCLUDE_LLAMA_SWAP=1"
             # Append -llamaswap to tag if building with llama-swap
             TAG="${B}-llamaswap_${BUILD_TS}"
             CHN="${CHN}-llamaswap"
+          else
+            echo "→ Building without llama-swap (using --target runtime)"
+            BUILD_ARGS="--target runtime"
           fi
 
           echo "→ Building ${DF}"

@@ -40,52 +40,57 @@ podman build --no-cache -t llama-rocm-6.4.2 -f Dockerfile.rocm-6.4.2 .
 
 ## 3. Building with llama-swap Support
 
-All toolbox images support optional inclusion of [llama-swap](https://github.com/mostlygeek/llama-swap), a utility for managing swap space for large language models.
+All toolbox images support optional inclusion of [llama-swap](https://github.com/mostlygeek/llama-swap), a utility for automatically stopping the llama-server application and restarting it with a new model.
 
-**Example: Build with llama-swap included (Podman)**
+The Dockerfiles use multi-stage builds with llama-swap as the final stage. You can choose whether to include it:
+
+**Example: Build WITHOUT llama-swap (default, stops at `runtime` stage)**
+
+```sh
+cd toolboxes
+podman build \
+  --target runtime \
+  -f Dockerfile.rocm-7.1-rocwmma \
+  -t rocm-llama:latest .
+```
+
+**Example: Build WITH llama-swap (builds complete image including final stage)**
 
 ```sh
 cd toolboxes
 podman build \
   --build-context llama-swap=Dockerfile.llama-swap \
-  --build-arg INCLUDE_LLAMA_SWAP=1 \
   -f Dockerfile.rocm-7.1-rocwmma \
-  -t rocm-llama:latest .
-```
-
-**Example: Build with llama-swap included (Docker)**
-
-```sh
-cd toolboxes
-docker build \
-  --build-context llama-swap=Dockerfile.llama-swap \
-  --build-arg INCLUDE_LLAMA_SWAP=1 \
-  -f Dockerfile.rocm-7.1-rocwmma \
-  -t rocm-llama:latest .
+  -t rocm-llama-with-swap:latest .
 ```
 
 **What's happening:**
 
-* `--build-context llama-swap=Dockerfile.llama-swap` provides the llama-swap builder as an external build context
-* `--build-arg INCLUDE_LLAMA_SWAP=1` enables llama-swap installation in the final image
+* The Dockerfiles have a `runtime` stage (without llama-swap) and a `runtime-with-llamaswap` stage (with llama-swap)
+* Using `--target runtime` stops at the stage without llama-swap and doesn't require the llama-swap build context
+* Building without `--target` builds all stages including the final `runtime-with-llamaswap` stage
+* `--build-context llama-swap=Dockerfile.llama-swap` provides the llama-swap builder as an external build context (only needed when building the full image)
 * The llama-swap binary is downloaded from the [official GitHub releases](https://github.com/mostlygeek/llama-swap/releases) and placed in `/usr/local/bin/llama-swap`
 
-**To build WITHOUT llama-swap** (default behavior), simply omit the `--build-context` and `--build-arg` flags:
+**Using Docker instead of Podman:**
 
 ```sh
 cd toolboxes
-podman build --no-cache -t llama-vulkan-radv -f Dockerfile.vulkan-radv .
+# Without llama-swap
+docker build --target runtime -f Dockerfile.rocm-7.1-rocwmma -t rocm-llama:latest .
+
+# With llama-swap
+docker build --build-context llama-swap=Dockerfile.llama-swap -f Dockerfile.rocm-7.1-rocwmma -t rocm-llama:latest .
 ```
 
 **Specifying a llama-swap version:**
 
-You can specify a specific version of llama-swap using the `LLAMA_SWAP_VERSION` build argument:
+You can specify a specific version of llama-swap using the `LLAMA_SWAP_VERSION` build argument when building the llama-swap context:
 
 ```sh
 cd toolboxes
 podman build \
   --build-context llama-swap=Dockerfile.llama-swap \
-  --build-arg INCLUDE_LLAMA_SWAP=1 \
   --build-arg LLAMA_SWAP_VERSION=v0.5.0 \
   -f Dockerfile.rocm-7.1-rocwmma \
   -t rocm-llama:latest .
@@ -122,14 +127,15 @@ The GitHub Actions workflow (`build_and_publish.yml`) supports building images w
 
 1. Navigate to **Actions** → **Build & Publish AMD Strix Halo Toolboxes** in the GitHub repository
 2. Click **Run workflow**
-3. Set **include_llama_swap** to **true** to build all images with llama-swap
-4. Images built with llama-swap will have `-llamaswap` appended to their tag (e.g., `rocm-7.1-rocwmma-llamaswap`)
+3. Set **include_llama_swap** to **true** to build all images with llama-swap (builds complete image)
+4. Set **include_llama_swap** to **false** to build images without llama-swap (uses `--target runtime`)
+5. Images built with llama-swap will have `-llamaswap` appended to their tag (e.g., `rocm-7.1-rocwmma-llamaswap`)
 
-**Default behavior:** Images are built WITHOUT llama-swap unless explicitly enabled.
+**Default behavior:** Images are built WITHOUT llama-swap (using `--target runtime`).
 
 **Note:** Building with llama-swap creates separate image tags, so both versions can coexist on Docker Hub:
-- Standard: `docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-7.1-rocwmma`
-- With llama-swap: `docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-7.1-rocwmma-llamaswap`
+- Standard: `docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-7.1-rocwmma` (built with `--target runtime`)
+- With llama-swap: `docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-7.1-rocwmma-llamaswap` (built without `--target`, includes final stage)
 
 ---
 
@@ -137,8 +143,8 @@ The GitHub Actions workflow (`build_and_publish.yml`) supports building images w
 
 * **Build fails (ROCm images especially):** Try building with more memory or swap.
 * **Toolbox can't access GPU:** Make sure you pass the correct device/group options.
-* **llama-swap not found in container:** Ensure you used `--build-context` and `--build-arg INCLUDE_LLAMA_SWAP=1` when building.
-* **"llama-swap" build context not found:** The `--build-context` flag requires Docker BuildKit. Ensure you're using a recent version of Docker/Podman.
+* **llama-swap not found in container:** Make sure you built without `--target runtime` and provided `--build-context llama-swap=Dockerfile.llama-swap`.
+* **"llama-swap" build context not found:** The `--build-context` flag requires Docker BuildKit. Ensure you're using a recent version of Docker/Podman. If you don't want llama-swap, use `--target runtime`.
 
 ---
 

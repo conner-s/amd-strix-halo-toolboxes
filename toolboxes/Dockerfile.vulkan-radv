@@ -2,8 +2,6 @@
 FROM registry.fedoraproject.org/fedora:43 AS builder
 # Toggle llama.cpp PR 15405 (RPC perf for large models)
 ARG APPLY_LLAMA_PR_15405=1
-# Optional: Include llama-swap (set to 1 to enable)
-ARG INCLUDE_LLAMA_SWAP=0
 
 # deps
 RUN dnf -y --nodocs --setopt=install_weak_deps=False install \
@@ -46,12 +44,8 @@ COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
 RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
 
 
-# Import llama-swap from external Dockerfile (if INCLUDE_LLAMA_SWAP=1)
-FROM llama-swap:llama-swap-builder AS llama-swap-import
-
 # runtime stage
-FROM registry.fedoraproject.org/fedora-minimal:43
-ARG INCLUDE_LLAMA_SWAP=0
+FROM registry.fedoraproject.org/fedora-minimal:43 AS runtime
 
 # runtime deps
 RUN microdnf -y --nodocs --setopt=install_weak_deps=0 install \
@@ -75,15 +69,16 @@ RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
 COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
 RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
 
-# Conditionally install llama-swap if INCLUDE_LLAMA_SWAP=1
+# shell
+CMD ["/bin/bash"]
+
+
+# llama-swap stage (optional, use --target runtime to skip)
+FROM llama-swap:llama-swap-builder AS llama-swap-import
+
+FROM runtime AS runtime-with-llamaswap
 COPY --from=llama-swap-import /tmp/llama-swap /usr/local/bin/llama-swap
-RUN if [ "${INCLUDE_LLAMA_SWAP}" = "1" ]; then \
-      chmod +x /usr/local/bin/llama-swap && \
-      echo "llama-swap installed successfully"; \
-    else \
-      rm -f /usr/local/bin/llama-swap && \
-      echo "llama-swap not included in this build"; \
-    fi
+RUN chmod +x /usr/local/bin/llama-swap
 
 # shell
 CMD ["/bin/bash"]

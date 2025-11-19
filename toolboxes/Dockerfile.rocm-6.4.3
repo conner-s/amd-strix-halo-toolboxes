@@ -1,7 +1,5 @@
 # build stage
 FROM registry.fedoraproject.org/fedora:rawhide AS builder
-# Optional: Include llama-swap (set to 1 to enable)
-ARG INCLUDE_LLAMA_SWAP=0
 
 # rocm 6.4.3 repo
 RUN <<'EOF'
@@ -63,12 +61,8 @@ COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
 RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
 
 
-# Import llama-swap from external Dockerfile (if INCLUDE_LLAMA_SWAP=1)
-FROM llama-swap:llama-swap-builder AS llama-swap-import
-
 # runtime stage
-FROM registry.fedoraproject.org/fedora-minimal:rawhide
-ARG INCLUDE_LLAMA_SWAP=0
+FROM registry.fedoraproject.org/fedora-minimal:rawhide AS runtime
 
 # rocm 6.4.3 repo
 RUN <<'EOF'
@@ -112,15 +106,21 @@ RUN printf '%s\n' \
   > /etc/profile.d/rocm.sh && chmod +x /etc/profile.d/rocm.sh \
   && echo 'source /etc/profile.d/rocm.sh' >> /etc/bashrc
 
-# Conditionally install llama-swap if INCLUDE_LLAMA_SWAP=1
+# shell
+
+
+# llama-swap stage (optional, use --target runtime to skip)
+FROM llama-swap:llama-swap-builder AS llama-swap-import
+
+FROM runtime AS runtime-with-llamaswap
 COPY --from=llama-swap-import /tmp/llama-swap /usr/local/bin/llama-swap
-RUN if [ "${INCLUDE_LLAMA_SWAP}" = "1" ]; then \
-      chmod +x /usr/local/bin/llama-swap && \
-      echo "llama-swap installed successfully"; \
-    else \
-      rm -f /usr/local/bin/llama-swap && \
-      echo "llama-swap not included in this build"; \
-    fi
+RUN chmod +x /usr/local/bin/llama-swap
+
+# profile
+RUN printf '%s\n' \
+  'export ROCBLAS_USE_HIPBLASLT=1' \
+  > /etc/profile.d/rocm.sh && chmod +x /etc/profile.d/rocm.sh \
+  && echo 'source /etc/profile.d/rocm.sh' >> /etc/bashrc
 
 # shell
 CMD ["/bin/bash"]

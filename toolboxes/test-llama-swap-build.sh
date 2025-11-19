@@ -13,38 +13,37 @@ podman build --target llama-swap-builder -t test-llama-swap -f Dockerfile.llama-
 echo "✓ llama-swap Dockerfile builds successfully"
 echo ""
 
-# Test 2: Build vulkan-radv WITHOUT llama-swap (default)
-echo "Test 2: Building vulkan-radv WITHOUT llama-swap (default)..."
-podman build -t test-vulkan-radv-no-swap -f Dockerfile.vulkan-radv .
+# Test 2: Build vulkan-radv WITHOUT llama-swap (using --target runtime)
+echo "Test 2: Building vulkan-radv WITHOUT llama-swap (using --target runtime)..."
+podman build --target runtime -t test-vulkan-radv-no-swap -f Dockerfile.vulkan-radv .
 echo "✓ vulkan-radv builds without llama-swap"
 echo ""
 
-# Test 3: Build vulkan-radv WITH llama-swap
-echo "Test 3: Building vulkan-radv WITH llama-swap..."
+# Test 3: Build vulkan-radv WITH llama-swap (complete build)
+echo "Test 3: Building vulkan-radv WITH llama-swap (complete build)..."
 podman build \
   --build-context llama-swap=Dockerfile.llama-swap \
-  --build-arg INCLUDE_LLAMA_SWAP=1 \
   -f Dockerfile.vulkan-radv \
   -t test-vulkan-radv-with-swap .
 echo "✓ vulkan-radv builds with llama-swap"
 echo ""
 
 # Test 4: Verify llama-swap is present in the with-swap image
-echo "Test 4: Verifying llama-swap binary in the image..."
+echo "Test 4: Verifying llama-swap binary in the with-swap image..."
 if podman run --rm test-vulkan-radv-with-swap test -f /usr/local/bin/llama-swap; then
-    echo "✓ llama-swap binary found in image"
+    echo "✓ llama-swap binary found in with-swap image"
 else
-    echo "✗ llama-swap binary NOT found in image"
+    echo "✗ llama-swap binary NOT found in with-swap image"
     exit 1
 fi
 echo ""
 
 # Test 5: Verify llama-swap is NOT present in the without-swap image
-echo "Test 5: Verifying llama-swap is NOT in the default image..."
+echo "Test 5: Verifying llama-swap is NOT in the runtime-only image..."
 if ! podman run --rm test-vulkan-radv-no-swap test -f /usr/local/bin/llama-swap; then
-    echo "✓ llama-swap correctly absent from default build"
+    echo "✓ llama-swap correctly absent from runtime-only build"
 else
-    echo "✗ llama-swap unexpectedly found in default build"
+    echo "✗ llama-swap unexpectedly found in runtime-only build"
     exit 1
 fi
 echo ""

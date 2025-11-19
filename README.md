@@ -315,17 +315,21 @@ For Qwen3-235B, **128GB RAM allows you to run with context up to \~130k tokens.*
 
 ## 5. Building Containers Locally
 
-Pre-built toolbox container images are published on Docker Hub for immediate use. If you wish to build the containers yourself (for example, to customize packages, rebuild with a different llama.cpp version, or include [llama-swap](https://github.com/mostlygeek/llama-swap) for swap management), see:
+Pre-built toolbox container images are published on Docker Hub for immediate use. If you wish to build the containers yourself (for example, to customize packages, rebuild with a different llama.cpp version, or include [llama-swap](https://github.com/mostlygeek/llama-swap) for automatic model switching), see:
 
 Full instructions: [docs/building.md](docs/building.md).
 
-**Quick example: Building with llama-swap support**
+**Quick examples:**
 
 ```sh
 cd toolboxes
+
+# Build without llama-swap (default)
+podman build --target runtime -f Dockerfile.rocm-7.1-rocwmma -t rocm-llama:latest .
+
+# Build with llama-swap
 podman build \
   --build-context llama-swap=Dockerfile.llama-swap \
-  --build-arg INCLUDE_LLAMA_SWAP=1 \
   -f Dockerfile.rocm-7.1-rocwmma \
   -t rocm-llama:latest .
 ```
