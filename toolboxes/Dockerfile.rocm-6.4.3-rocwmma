@@ -69,7 +69,7 @@ RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
 
 
 # runtime stage
-FROM registry.fedoraproject.org/fedora-minimal:rawhide
+FROM registry.fedoraproject.org/fedora-minimal:rawhide AS runtime
 
 # rocm 6.4.3 repo
 RUN <<'EOF'
@@ -106,6 +106,22 @@ RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
 # helper
 COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
 RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
+
+# profile
+RUN printf '%s\n' \
+  'export ROCBLAS_USE_HIPBLASLT=1' \
+  > /etc/profile.d/rocm.sh && chmod +x /etc/profile.d/rocm.sh \
+  && echo 'source /etc/profile.d/rocm.sh' >> /etc/bashrc
+
+# shell
+
+
+# llama-swap stage (optional, use --target runtime to skip)
+FROM llama-swap:llama-swap-builder AS llama-swap-import
+
+FROM runtime AS runtime-with-llamaswap
+COPY --from=llama-swap-import /tmp/llama-swap /usr/local/bin/llama-swap
+RUN chmod +x /usr/local/bin/llama-swap
 
 # profile
 RUN printf '%s\n' \

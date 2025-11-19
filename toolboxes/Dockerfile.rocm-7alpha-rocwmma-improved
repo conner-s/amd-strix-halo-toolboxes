@@ -81,8 +81,9 @@ RUN cmake -S . -B build \
  && cmake --build build --config Release -- -j$(nproc) \
  && cmake --install build --config Release
 
+
 # runtime
-FROM registry.fedoraproject.org/fedora-minimal:43
+FROM registry.fedoraproject.org/fedora-minimal:43 AS runtime
 
 RUN microdnf -y --nodocs --setopt=install_weak_deps=0 install \
       bash ca-certificates libatomic libstdc++ libgcc radeontop vim \
@@ -130,5 +131,14 @@ RUN printf '%s\n' \
 RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
  && echo "/usr/local/lib64" >> /etc/ld.so.conf.d/local.conf \
  && ldconfig
+
+
+
+# llama-swap stage (optional, use --target runtime to skip)
+FROM llama-swap:llama-swap-builder AS llama-swap-import
+
+FROM runtime AS runtime-with-llamaswap
+COPY --from=llama-swap-import /tmp/llama-swap /usr/local/bin/llama-swap
+RUN chmod +x /usr/local/bin/llama-swap
 
 CMD ["/bin/bash"]

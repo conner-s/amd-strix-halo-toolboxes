@@ -1,0 +1,25 @@
+# llama-swap builder stage
+FROM registry.fedoraproject.org/fedora-minimal:43 AS llama-swap-builder
+
+ARG LLAMA_SWAP_VERSION=latest
+
+# Install minimal deps for downloading and extracting
+RUN microdnf -y install tar gzip curl ca-certificates && microdnf clean all
+
+# Download and extract llama-swap binary
+WORKDIR /tmp
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi && \
+    if [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
+    if [ "${LLAMA_SWAP_VERSION}" = "latest" ]; then \
+      DOWNLOAD_URL="https://github.com/mostlygeek/llama-swap/releases/latest/download/llama-swap_Linux_${ARCH}.tar.gz"; \
+    else \
+      DOWNLOAD_URL="https://github.com/mostlygeek/llama-swap/releases/download/${LLAMA_SWAP_VERSION}/llama-swap_Linux_${ARCH}.tar.gz"; \
+    fi && \
+    curl -L -o llama-swap.tar.gz "${DOWNLOAD_URL}" && \
+    tar -xzf llama-swap.tar.gz && \
+    chmod +x llama-swap
+
+# Minimal export stage
+FROM scratch AS llama-swap-export
+COPY --from=llama-swap-builder /tmp/llama-swap /llama-swap
